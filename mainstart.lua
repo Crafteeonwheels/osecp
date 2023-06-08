@@ -1,86 +1,94 @@
--- Initialize the file system
-local filesystem = {}
+-- Set up the monitor
+local monitor = peripheral.find("monitor")
+monitor.setTextScale(0.5)
+monitor.clear()
+
+-- GUI functions
+local function clearScreen()
+  monitor.clear()
+  monitor.setCursorPos(1, 1)
+end
+
+local function drawMenu()
+  clearScreen()
+  monitor.write("1. List files")
+  monitor.setCursorPos(1, 3)
+  monitor.write("2. Read file")
+  monitor.setCursorPos(1, 5)
+  monitor.write("3. Write file")
+  monitor.setCursorPos(1, 7)
+  monitor.write("4. Delete file")
+  monitor.setCursorPos(1, 9)
+  monitor.write("5. Exit")
+end
+
+local function getInput()
+  local event, side, x, y = os.pullEvent("monitor_touch")
+  return y / 2
+end
 
 -- File system functions
-function filesystem.exists(file)
-  return fs.exists(file)
+local function listFiles()
+  local files = fs.list("/")
+  clearScreen()
+  for _, file in ipairs(files) do
+    monitor.write(file .. "\n")
+  end
 end
 
-function filesystem.read(file)
-  local handle = fs.open(file, "r")
-  local content = handle.readAll()
-  handle.close()
-  return content
+local function readFile()
+  clearScreen()
+  monitor.write("Enter file name:")
+  local file = read()
+  if fs.exists(file) then
+    clearScreen()
+    monitor.write(fs.open(file, "r").readAll())
+  else
+    monitor.write("File does not exist.")
+  end
 end
 
-function filesystem.write(file, content)
+local function writeFile()
+  clearScreen()
+  monitor.write("Enter file name:")
+  local file = read()
+  clearScreen()
+  monitor.write("Enter file content:")
+  local content = read()
   local handle = fs.open(file, "w")
   handle.write(content)
   handle.close()
+  monitor.write("File written successfully.")
 end
 
-function filesystem.delete(file)
-  fs.delete(file)
-end
-
--- Command processor
-local commands = {}
-
-function commands.help()
-  print("Available commands:")
-  print("- help: Displays this help message")
-  print("- list: Lists all files in the current directory")
-  print("- read <file>: Reads the content of a file")
-  print("- write <file> <content>: Writes content to a file")
-  print("- delete <file>: Deletes a file")
-end
-
-function commands.list()
-  local files = fs.list(shell.dir())
-  for _, file in ipairs(files) do
-    print(file)
-  end
-end
-
-function commands.read(file)
-  if filesystem.exists(file) then
-    local content = filesystem.read(file)
-    print(content)
+local function deleteFile()
+  clearScreen()
+  monitor.write("Enter file name:")
+  local file = read()
+  if fs.exists(file) then
+    fs.delete(file)
+    monitor.write("File deleted successfully.")
   else
-    print("File does not exist.")
+    monitor.write("File does not exist.")
   end
 end
 
-function commands.write(file, content)
-  filesystem.write(file, content)
-  print("File written successfully.")
-end
-
-function commands.delete(file)
-  if filesystem.exists(file) then
-    filesystem.delete(file)
-    print("File deleted successfully.")
-  else
-    print("File does not exist.")
-  end
-end
-
--- Command prompt
+-- Main loop
 while true do
-  write("> ")
-  local input = read()
-  local args = {}
-  for arg in string.gmatch(input, "%S+") do
-    table.insert(args, arg)
-  end
-
-  local command = args[1]
-  if command == "exit" then
+  drawMenu()
+  local option = getInput()
+  
+  if option == 1 then
+    listFiles()
+  elseif option == 2 then
+    readFile()
+  elseif option == 3 then
+    writeFile()
+  elseif option == 4 then
+    deleteFile()
+  elseif option == 5 then
     break
-  elseif commands[command] then
-    table.remove(args, 1)
-    commands[command](unpack(args))
-  else
-    print("Unknown command. Type 'help' for a list of commands.")
   end
+  
+  os.pullEvent("monitor_touch")
 end
